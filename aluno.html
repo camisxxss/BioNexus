@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>BioNexus - Aluno</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* ==================== ESTILOS ORIGINAIS (NÃO ALTERADOS) ==================== */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        :root {
+            --bg-gradient: radial-gradient(circle at 10% 20%, #eef5f0 0%, #dce8e0 100%);
+            --card-bg: rgba(255, 253, 248, 0.78);
+            --text-primary: #668167;
+            --text-secondary: #2c5a4a;
+            --border-light: rgba(42, 157, 143, 0.25);
+            --shadow: 0 8px 32px rgba(0, 40, 20, 0.08);
+            --accent: #062522;
+            --accent-dark: #7c9989;
+            --glass-blur: blur(12px);
+        }
+        body.dark {
+            --bg-gradient: radial-gradient(circle at 10% 20%, #1a2a25 0%, #0e1f1a 100%);
+            --card-bg: rgba(30, 40, 35, 0.85);
+            --text-primary: #2d8152;
+            --text-secondary: #ffffff;
+            --border-light: rgba(42, 157, 143, 0.4);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+            min-height: 100vh;
+            padding: 1.5rem;
+        }
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: var(--glass-blur);
+            border-radius: 2rem;
+            border: 1px solid var(--border-light);
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .glass-card:hover { transform: translateY(-4px); border-color: var(--accent); }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            border: none;
+            padding: 0.7rem 1.8rem;
+            border-radius: 3rem;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(42, 157, 143, 0.3);
+        }
+        .btn-primary:hover { transform: scale(1.02); opacity: 0.95; }
+        .btn-sec {
+            background: rgba(100, 120, 110, 0.7);
+            border: none;
+            padding: 0.6rem 1.4rem;
+            border-radius: 2rem;
+            color: white;
+            cursor: pointer;
+        }
+        input, select {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid var(--border-light);
+            border-radius: 1rem;
+            padding: 0.7rem 1rem;
+            color: var(--text-primary);
+            width: 100%;
+            max-width: 100%;
+        }
+        .tabs {
+            display: flex;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border-light);
+            padding-bottom: 0.5rem;
+        }
+        .tab-btn {
+            background: transparent;
+            padding: 0.6rem 1.2rem;
+            border-radius: 2rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            color: var(--text-secondary);
+        }
+        .tab-btn.active {
+            background: var(--accent);
+            color: white;
+        }
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.8rem;
+            margin-top: 1.5rem;
+        }
+        .content-card, .mindmap-card, .slide-card, .sala-card {
+            background: white;
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        .content-card:hover, .mindmap-card:hover, .slide-card:hover { transform: translateY(-5px); box-shadow: var(--shadow); }
+        .serie-filter {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .serie-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--border-light);
+            padding: 0.5rem 1.2rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .serie-btn.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+        .quiz-config {
+            background: rgba(42,157,143,0.1);
+            border-radius: 1rem;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        .feedback-msg {
+            padding: 0.8rem;
+            border-radius: 1rem;
+            margin: 0.8rem 0;
+            background: rgba(42, 157, 143, 0.2);
+            border-left: 4px solid var(--accent);
+        }
+        .mindmap-image, .slide-image {
+            max-width: 100%;
+            border-radius: 1rem;
+            margin-top: 0.5rem;
+            cursor: pointer;
+        }
+        .toggle-dark {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--accent);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 100;
+            box-shadow: var(--shadow);
+        }
+        @media (max-width: 720px) { body { padding: 1rem; } .cards-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div id="root"></div>
+<div class="toggle-dark" id="darkModeToggle"><i class="fas fa-moon"></i></div>
+
+<script>
+    // ==================== CONFIGURAÇÃO DA API ====================
+    const API_BASE = '/bionexus/api/'; // Ajuste conforme seu caminho no XAMPP
+
+    // ==================== SESSÃO DO ALUNO ====================
+    let currentUser = null;
+    let studentXP = 0;
+    let studentLevel = 1;
+    
+    // Verifica se já está logado (sessão via localStorage)
+    let saved = localStorage.getItem("nexus_logged_user");
+    if (saved && JSON.parse(saved).type === "student") {
+        currentUser = JSON.parse(saved);
+        // Buscar dados do aluno no banco (XP, nível)
+        fetch(API_BASE + 'get_student.php?name=' + encodeURIComponent(currentUser.name))
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    studentXP = data.xp || 0;
+                    studentLevel = data.level || 1;
+                } else {
+                    // Se não encontrou, cria um novo
+                    fetch(API_BASE + 'register_student.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: currentUser.name, code: 'MLXFBIOLOGIACVE' })
+                    }).then(() => location.reload());
+                }
+                renderHeader();
+                render();
+            })
+            .catch(() => { renderHeader(); render(); });
+    } else {
+        window.location.href = "index.html";
+    }
+
+    // Função para atualizar XP do aluno no servidor
+    async function updateStudentXP(earnedXP) {
+        studentXP += earnedXP;
+        studentLevel = Math.floor(studentXP / 100) + 1;
+        await fetch(API_BASE + 'update_student_xp.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: currentUser.name, xp: studentXP, level: studentLevel })
+        });
+        renderHeader();
+    }
+
+    // ==================== CARREGAMENTO DE DADOS DO SERVIDOR ====================
+    let sharedContents = { "1º Ano": [], "2º Ano": [], "3º Ano": [] };
+    let sharedQuizzes = { "1º Ano": [], "2º Ano": [], "3º Ano": [] };
+    let sharedMindmaps = [];
+    let sharedSlides = [];
+    let sharedClassrooms = [];
+    let mentoriaContents = { "1º Ano": [], "2º Ano": [], "3º Ano": [] };
+
+    async function loadAllData() {
+        try {
+            const [contentsRes, quizzesRes, mindmapsRes, slidesRes, classroomsRes, mentoriaRes] = await Promise.all([
+                fetch(API_BASE + 'get_all_contents.php'),
+                fetch(API_BASE + 'get_all_quizzes.php'),
+                fetch(API_BASE + 'get_mindmaps.php'),
+                fetch(API_BASE + 'get_slides.php'),
+                fetch(API_BASE + 'get_classrooms.php'),
+                fetch(API_BASE + 'get_mentorship_contents.php')
+            ]);
+            const contentsData = await contentsRes.json();
+            const quizzesData = await quizzesRes.json();
+            const mindmapsData = await mindmapsRes.json();
+            const slidesData = await slidesRes.json();
+            const classroomsData = await classroomsRes.json();
+            const mentoriaData = await mentoriaRes.json();
+            
+            // Organizar conteúdos por série
+            sharedContents = { "1º Ano": [], "2º Ano": [], "3º Ano": [] };
+            contentsData.forEach(item => {
+                if (sharedContents[item.serie]) sharedContents[item.serie].push(item);
+            });
+            // Organizar quizzes por série
+            sharedQuizzes = { "1º Ano": [], "2º Ano": [], "3º Ano": [] };
+            quizzesData.forEach(q => {
+                if (sharedQuizzes[q.serie]) sharedQuizzes[q.serie].push(q);
+            });
+            sharedMindmaps = mindmapsData;
+            sharedSlides = slidesData;
+            sharedClassrooms = classroomsData;
+            // Organizar mentoria por série
+            mentoriaContents = { "1º Ano": [], "2º Ano": [], "3º Ano": [] };
+            mentoriaData.forEach(m => {
+                if (mentoriaContents[m.serie]) mentoriaContents[m.serie].push(m);
+            });
+        } catch (error) {
+            console.error("Erro ao carregar dados:", error);
+        }
+    }
+
+    // ==================== FUNÇÕES DE PERSISTÊNCIA (API) ====================
+    async function saveQuizResult(result) {
+        await fetch(API_BASE + 'save_result.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(result)
+        });
+        // Atualiza XP do aluno (10 XP por acerto, já incluso na lógica do quiz)
+    }
+
+    async function saveMentorAccess(data) {
+        await fetch(API_BASE + 'save_mentorship_access.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+    }
+
+    // ==================== FUNÇÕES AUXILIARES ====================
+    function renderHeader() {
+        const headerDiv = document.getElementById("dynamicHeader");
+        if (headerDiv) {
+            headerDiv.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                    <div><h2><i class="fas fa-graduation-cap"></i> Olá, ${currentUser.name}</h2><p>XP: ${studentXP} | Nível: ${studentLevel}</p></div>
+                    <button id="logoutBtn" class="btn-sec">Sair</button>
+                </div>
+            `;
+            document.getElementById("logoutBtn").onclick = () => {
+                localStorage.removeItem("nexus_logged_user");
+                window.location.href = "index.html";
+            };
+        }
+    }
+
+    function render() {
+        const root = document.getElementById("root");
+        root.innerHTML = `
+            <div id="dynamicHeader" class="glass-card" style="padding:1rem;"></div>
+            <div class="tabs" id="mainTabs">
+                <button class="tab-btn active" data-tab="conteudos">📚 Conteúdos</button>
+                <button class="tab-btn" data-tab="quizzes">📝 Quizzes</button>
+                <button class="tab-btn" data-tab="mapas">🗺️ Mapas Mentais</button>
+                <button class="tab-btn" data-tab="slides">📽️ Slides</button>
+                <button class="tab-btn" data-tab="salas">🏫 Salas de Aula</button>
+                <button class="tab-btn" data-tab="mentoria">🎓 Mentoria</button>
+                <button class="tab-btn" data-tab="celula">🔬 Laboratório Virtual</button>
+            </div>
+            <div id="mainContent"></div>
+        `;
+        renderHeader();
+        attachTabs();
+        showTab("conteudos");
+    }
+
+    function attachTabs() {
+        document.querySelectorAll("#mainTabs .tab-btn").forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll("#mainTabs .tab-btn").forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                showTab(btn.dataset.tab);
+            };
+        });
+    }
+
+    function showTab(tab) {
+        if (tab === "conteudos") renderConteudos();
+        else if (tab === "quizzes") renderQuizzesGeral();
+        else if (tab === "mapas") renderMapas();
+        else if (tab === "slides") renderSlides();
+        else if (tab === "salas") renderSalas();
+        else if (tab === "mentoria") renderMentoria();
+        else if (tab === "celula") renderCelula();
+    }
+
+    // ==================== RENDERIZAÇÕES (CONTEÚDOS, MAPAS, SLIDES, SALAS, CÉLULA) ====================
+    function renderConteudos() {
+        const container = document.getElementById("mainContent");
+        let series = ["1º Ano", "2º Ano", "3º Ano"];
+        let currentSerie = "1º Ano";
+        function loadCards() {
+            let cardsHtml = `<div class="serie-filter">${series.map(s => `<button class="serie-btn ${s === currentSerie ? 'active' : ''}" data-serie="${s}">${s}</button>`).join('')}</div>`;
+            cardsHtml += `<div class="cards-grid" id="conteudosGrid"></div><div id="conteudoDetalhe"></div>`;
+            container.innerHTML = cardsHtml;
+            document.querySelectorAll(".serie-btn").forEach(btn => {
+                btn.onclick = () => { currentSerie = btn.dataset.serie; loadCards(); };
+            });
+            const conteudos = sharedContents[currentSerie] || [];
+            const grid = document.getElementById("conteudosGrid");
+            grid.innerHTML = conteudos.map(c => `
+                <div class="content-card" data-id="${c.id}">
+                    <i class="fas fa-book-open fa-2x" style="color: var(--accent);"></i>
+                    <h3>${c.titulo}</h3>
+                    <p>${c.descricao || c.desc}</p>
+                </div>
+            `).join('');
+            document.querySelectorAll(".content-card").forEach(card => {
+                card.onclick = () => {
+                    let id = card.dataset.id;
+                    let conteudo = conteudos.find(c => c.id === id);
+                    document.getElementById("conteudoDetalhe").innerHTML = `
+                        <div class="glass-card" style="margin-top:1rem;">
+                            <h3>${conteudo.titulo}</h3>
+                            <div style="background: rgba(0,0,0,0.03); padding: 1rem; border-radius: 1rem; margin-top: 0.5rem;">${conteudo.texto}</div>
+                            <button class="btn-sec" onclick="document.getElementById('conteudoDetalhe').innerHTML = '';">Fechar</button>
+                        </div>
+                    `;
+                };
+            });
+        }
+        loadCards();
+    }
+
+    // ==================== QUIZZES GERAIS COM IDENTIFICAÇÃO ====================
+    function renderQuizzesGeral() {
+        const container = document.getElementById("mainContent");
+        container.innerHTML = `
+            <div class="glass-card">
+                <h3>📝 Identifique-se para começar o quiz</h3>
+                <div class="quiz-config">
+                    <input type="text" id="quizNome" placeholder="Nome completo" required>
+                    <input type="text" id="quizSerie" placeholder="Série/Turma (ex: 2º Ano A)" required>
+                    <select id="quizCurso" required>
+                        <option value="">Selecione o curso</option>
+                        <option>Informática</option>
+                        <option>Administração</option>
+                        <option>Enfermagem</option>
+                        <option>Desenho (DCC)</option>
+                    </select>
+                    <button id="liberarQuizBtn" class="btn-primary">Liberar Quiz</button>
+                </div>
+                <div id="quizGeralArea"></div>
+            </div>
+        `;
+        document.getElementById("liberarQuizBtn").onclick = () => {
+            let nome = document.getElementById("quizNome").value.trim();
+            let serie = document.getElementById("quizSerie").value.trim();
+            let curso = document.getElementById("quizCurso").value;
+            if (!nome || !serie || !curso) {
+                alert("Preencha todos os campos.");
+                return;
+            }
+            window.quizIdentificacao = { nome, serie, curso };
+            carregarQuizzesParaEscolha();
+        };
+    }
+
+    function carregarQuizzesParaEscolha() {
+        const container = document.getElementById("quizGeralArea");
+        let series = ["1º Ano", "2º Ano", "3º Ano"];
+        let currentSerie = "1º Ano";
+        function loadQuizzes() {
+            let html = `<div class="serie-filter">${series.map(s => `<button class="serie-btn ${s === currentSerie ? 'active' : ''}" data-serie="${s}">${s}</button>`).join('')}</div>`;
+            html += `<div class="cards-grid" id="quizzesGridGeral"></div><div id="quizGeralPlayArea"></div>`;
+            container.innerHTML = html;
+            document.querySelectorAll("#quizGeralArea .serie-btn").forEach(btn => {
+                btn.onclick = () => { currentSerie = btn.dataset.serie; loadQuizzes(); };
+            });
+            const quizzes = sharedQuizzes[currentSerie] || [];
+            const grid = document.getElementById("quizzesGridGeral");
+            grid.innerHTML = quizzes.map((q, idx) => `
+                <div class="glass-card" data-idx="${idx}">
+                    <h4>${q.text.substring(0, 50)}</h4>
+                    <button class="btn-primary iniciarQuizGeralBtn" data-idx="${idx}" data-serie="${currentSerie}">Responder</button>
+                </div>
+            `).join('');
+            document.querySelectorAll(".iniciarQuizGeralBtn").forEach(btn => {
+                btn.onclick = () => {
+                    let serie = btn.dataset.serie;
+                    let idx = parseInt(btn.dataset.idx);
+                    let questao = sharedQuizzes[serie][idx];
+                    iniciarQuizCompleto(serie, questao, "Geral");
+                };
+            });
+        }
+        loadQuizzes();
+    }
+
+    // ==================== FUNÇÃO GERAL DE QUIZ (COM BOTÃO PRÓXIMA) ====================
+    function iniciarQuizCompleto(serie, questaoInicial, tipoAcesso, userIdent = null, assunto = null) {
+        const identificacao = userIdent || window.quizIdentificacao;
+        if (!identificacao) {
+            alert("É necessário se identificar antes de iniciar o quiz.");
+            return;
+        }
+        let todasQuestoes = sharedQuizzes[serie] || [];
+        if (todasQuestoes.length === 0) {
+            alert("Nenhuma questão disponível para esta série.");
+            return;
+        }
+        let questions = [...todasQuestoes];
+        let currentIndex = 0;
+        let score = 0;
+        let errors = 0;
+
+        const container = tipoAcesso === "Geral" ? document.getElementById("quizGeralPlayArea") : document.getElementById("mentoriaDetalhe");
+        if (!container) return;
+
+        function renderQuestion() {
+            if (currentIndex >= questions.length) {
+                let notaFinal = (score / questions.length) * 10;
+                let result = {
+                    nome: identificacao.nome,
+                    serie: identificacao.serie,
+                    curso: identificacao.curso,
+                    assunto: assunto || `Quiz ${serie}`,
+                    acertos: score,
+                    erros: errors,
+                    nota: notaFinal.toFixed(2),
+                    data: new Date().toISOString(),
+                    tipo: tipoAcesso
+                };
+                saveQuizResult(result);
+                // Ganha XP (10 XP por acerto)
+                if (tipoAcesso === "Geral") {
+                    updateStudentXP(score * 10);
+                }
+                container.innerHTML = `
+                    <div class="feedback-msg">
+                        <h3>🏁 Quiz finalizado!</h3>
+                        <p>Acertos: ${score}</p>
+                        <p>Erros: ${errors}</p>
+                        <p>Nota: ${notaFinal.toFixed(2)}</p>
+                        <button class="btn-primary" onclick="location.reload()">Fazer outro quiz</button>
+                    </div>
+                `;
+                return;
+            }
+            let q = questions[currentIndex];
+            let html = `
+                <div class="glass-card" style="margin-top:1rem;">
+                    <p><strong>Pergunta ${currentIndex+1}/${questions.length}</strong> (${q.difficulty})</p>
+                    <p>${q.text}</p>
+                    <div id="optsMentoria">
+                        ${q.options.map((opt, i) => `<button class="btn-sec optMentoria" data-opt="${i}" style="display:block; width:100%; margin:0.3rem 0;">${opt}</button>`).join('')}
+                    </div>
+                    <div id="fbMentoria"></div>
+                    <button id="nextMentoriaBtn" class="btn-primary" style="margin-top:1rem; display:none;">➡️ Próxima pergunta</button>
+                </div>
+            `;
+            container.innerHTML = html;
+            let nextBtn = document.getElementById("nextMentoriaBtn");
+            nextBtn.disabled = true;
+            document.querySelectorAll(".optMentoria").forEach(btn => {
+                btn.onclick = (e) => {
+                    let selected = parseInt(e.target.dataset.opt);
+                    let isCorrect = (selected === q.correct);
+                    if (isCorrect) {
+                        score++;
+                        document.getElementById("fbMentoria").innerHTML = `<div class="feedback-msg">✅ Correto! ${q.explanation}</div>`;
+                    } else {
+                        errors++;
+                        document.getElementById("fbMentoria").innerHTML = `<div class="feedback-msg">❌ Errado. ${q.explanation}</div>`;
+                    }
+                    document.querySelectorAll(".optMentoria").forEach(b => b.disabled = true);
+                    nextBtn.style.display = "inline-block";
+                    nextBtn.disabled = false;
+                    nextBtn.onclick = () => {
+                        currentIndex++;
+                        renderQuestion();
+                    };
+                };
+            });
+        }
+        renderQuestion();
+    }
+
+    // ==================== MAPAS, SLIDES, SALAS, CÉLULA ====================
+    function renderMapas() {
+        const container = document.getElementById("mainContent");
+        container.innerHTML = `<div class="cards-grid">${sharedMindmaps.map(m => `
+            <div class="glass-card">
+                <h3>${m.titulo}</h3>
+                ${m.tipo === 'imagem' ? `<img src="${m.data_url}" class="mindmap-image" onclick="window.open('${m.data_url}','_blank')">` : `<embed src="${m.data_url}" width="100%" height="200" type="application/pdf">`}
+                <p>Clique para ampliar</p>
+            </div>`).join('')}</div>`;
+    }
+
+    function renderSlides() {
+        const container = document.getElementById("mainContent");
+        container.innerHTML = `<div class="cards-grid">${sharedSlides.map(s => `
+            <div class="glass-card">
+                <h3>${s.titulo}</h3>
+                ${s.tipo === 'imagem' ? `<img src="${s.data_url}" class="slide-image" onclick="window.open('${s.data_url}','_blank')">` : `<embed src="${s.data_url}" width="100%" height="250" type="application/pdf">`}
+                <p>Clique para visualizar</p>
+            </div>`).join('')}</div>`;
+    }
+
+    function renderSalas() {
+        const container = document.getElementById("mainContent");
+        container.innerHTML = `
+            <div class="glass-card">
+                <h3>🔐 Entrar em uma Sala de Aula</h3>
+                <input type="password" id="roomPassword" placeholder="Senha da sala">
+                <button id="enterRoomBtn" class="btn-primary">Entrar</button>
+                <div id="roomContent"></div>
+            </div>
+            <h3>📋 Salas disponíveis</h3>
+            <div class="cards-grid">
+                ${sharedClassrooms.map(s => `<div class="glass-card sala-card"><strong>${s.name}</strong><br>Senha: ${s.password}<br>Materiais: ${JSON.parse(s.materials || "[]").join(", ")}</div>`).join('')}
+            </div>
+        `;
+        document.getElementById("enterRoomBtn").onclick = () => {
+            let pass = document.getElementById("roomPassword").value;
+            let sala = sharedClassrooms.find(s => s.password === pass);
+            if (sala) {
+                document.getElementById("roomContent").innerHTML = `<div class="feedback-msg">✅ Você entrou na sala <strong>${sala.name}</strong>! Materiais: ${JSON.parse(sala.materials || "[]").join(", ")}.</div>`;
+            } else {
+                document.getElementById("roomContent").innerHTML = "<div class='feedback-msg' style='background:#ffdddd; border-left-color:red;'>❌ Senha inválida!</div>";
+            }
+        };
+    }
+
+    function renderCelula() {
+        const container = document.getElementById("mainContent");
+        container.innerHTML = `
+            <div class="glass-card" style="text-align:center;">
+                <i class="fas fa-microscope" style="font-size:3rem; color:var(--accent);"></i>
+                <h2>Laboratório Virtual - Célula</h2>
+                <p>Acesse o ambiente interativo para explorar a estrutura celular.</p>
+                <div style="margin:2rem 0;"><a href="célula.teste.html" class="btn-primary" style="display:inline-block; text-decoration:none;">🔬 Ir para célula 3D</a></div>
+            </div>
+        `;
+    }
+
+    // ==================== MENTORIA COM CÓDIGO E CONTEÚDOS ====================
+    let mentorAccessGranted = false;
+    let mentorUserData = null;
+
+    function renderMentoria() {
+        const container = document.getElementById("mainContent");
+        if (!mentorAccessGranted) {
+            container.innerHTML = `
+                <div class="glass-card">
+                    <h3>🎓 Acesso à Mentoria</h3>
+                    <p>Para acessar os conteúdos exclusivos, informe seus dados e o código de acesso.</p>
+                    <div class="quiz-config">
+                        <input type="text" id="mentorNome" placeholder="Nome completo">
+                        <input type="text" id="mentorSerie" placeholder="Série/Turma">
+                        <select id="mentorCurso">
+                            <option value="">Selecione o curso</option>
+                            <option>Informática</option>
+                            <option>Administração</option>
+                            <option>Enfermagem</option>
+                            <option>Desenho (DCC)</option>
+                        </select>
+                        <input type="password" id="mentorCodigo" placeholder="Código de acesso">
+                        <button id="validarMentoriaBtn" class="btn-primary">Validar e Entrar</button>
+                    </div>
+                    <div id="mentorMsg"></div>
+                </div>
+            `;
+            document.getElementById("validarMentoriaBtn").onclick = async () => {
+                let nome = document.getElementById("mentorNome").value.trim();
+                let serie = document.getElementById("mentorSerie").value.trim();
+                let curso = document.getElementById("mentorCurso").value;
+                let codigo = document.getElementById("mentorCodigo").value;
+                if (!nome || !serie || !curso) {
+                    document.getElementById("mentorMsg").innerHTML = "<div class='feedback-msg' style='background:#ffdddd;'>Preencha todos os campos.</div>";
+                    return;
+                }
+                if (codigo !== "MENTORIAMLXFCVE") {
+                    document.getElementById("mentorMsg").innerHTML = "<div class='feedback-msg' style='background:#ffdddd;'>❌ Código inválido! Acesso negado.</div>";
+                    return;
+                }
+                await saveMentorAccess({ nome, serie, curso, data: new Date().toISOString(), tipo: "Mentoria" });
+                mentorAccessGranted = true;
+                mentorUserData = { nome, serie, curso };
+                renderMentoria();
+            };
+        } else {
+            // Usar os dados carregados de mentoriaContents
+            container.innerHTML = `
+                <div class="glass-card">
+                    <h3>🎓 Mentoria - Conteúdos Exclusivos</h3>
+                    <p>Bem-vindo, ${mentorUserData.nome} (${mentorUserData.serie} - ${mentorUserData.curso})</p>
+                    <button id="sairMentoriaBtn" class="btn-sec">Sair da Mentoria</button>
+                </div>
+                <div id="mentoriaConteudos"></div>
+            `;
+            document.getElementById("sairMentoriaBtn").onclick = () => {
+                mentorAccessGranted = false;
+                mentorUserData = null;
+                renderMentoria();
+            };
+            carregarConteudosMentoria();
+        }
+    }
+
+    function carregarConteudosMentoria() {
+        const container = document.getElementById("mentoriaConteudos");
+        let series = ["1º Ano", "2º Ano", "3º Ano"];
+        let currentSerie = "1º Ano";
+        function loadConteudos() {
+            let html = `<div class="serie-filter">${series.map(s => `<button class="serie-btn ${s === currentSerie ? 'active' : ''}" data-serie="${s}">${s}</button>`).join('')}</div>`;
+            html += `<div class="cards-grid" id="mentoriaCards"></div><div id="mentoriaDetalhe"></div>`;
+            container.innerHTML = html;
+            document.querySelectorAll("#mentoriaConteudos .serie-btn").forEach(btn => {
+                btn.onclick = () => { currentSerie = btn.dataset.serie; loadConteudos(); };
+            });
+            const conteudos = mentoriaContents[currentSerie] || [];
+            const grid = document.getElementById("mentoriaCards");
+            grid.innerHTML = conteudos.map(c => `
+                <div class="content-card" data-id="${c.id}">
+                    <i class="fas fa-star-of-life fa-2x" style="color: var(--accent);"></i>
+                    <h3>${c.titulo}</h3>
+                    <p>${c.descricao || c.desc}</p>
+                    <button class="btn-primary verConteudoMentoria" data-id="${c.id}">Ver conteúdo</button>
+                    <button class="btn-sec quizMentoriaBtn" data-serie="${currentSerie}" data-titulo="${c.titulo}">Fazer Quiz</button>
+                </div>
+            `).join('');
+            // Ver conteúdo
+            document.querySelectorAll(".verConteudoMentoria").forEach(btn => {
+                btn.onclick = () => {
+                    let id = btn.dataset.id;
+                    let conteudo = conteudos.find(c => c.id === id);
+                    document.getElementById("mentoriaDetalhe").innerHTML = `
+                        <div class="glass-card" style="margin-top:1rem;">
+                            <h3>${conteudo.titulo}</h3>
+                            <div>${conteudo.texto}</div>
+                            <button class="btn-sec" onclick="document.getElementById('mentoriaDetalhe').innerHTML = '';">Fechar</button>
+                        </div>
+                    `;
+                };
+            });
+            // Quiz da mentoria
+            document.querySelectorAll(".quizMentoriaBtn").forEach(btn => {
+                btn.onclick = () => {
+                    let serie = btn.dataset.serie;
+                    let tituloConteudo = btn.dataset.titulo;
+                    let questoes = sharedQuizzes[serie] || [];
+                    if (questoes.length === 0) {
+                        alert("Nenhum quiz disponível para esta série.");
+                        return;
+                    }
+                    iniciarQuizCompleto(serie, questoes[0], "Mentoria", mentorUserData, tituloConteudo);
+                };
+            });
+        }
+        loadConteudos();
+    }
+
+    // ==================== INICIALIZAÇÃO ====================
+    (async function init() {
+        await loadAllData();
+        render();
+    })();
+
+    const toggle = document.getElementById("darkModeToggle");
+    if (localStorage.getItem("darkMode") === "enabled") document.body.classList.add("dark");
+    toggle.onclick = () => {
+        document.body.classList.toggle("dark");
+        localStorage.setItem("darkMode", document.body.classList.contains("dark") ? "enabled" : "disabled");
+    };
+</script>
+</body>
+</html>

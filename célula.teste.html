@@ -1,0 +1,698 @@
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>BioLab 3D - Células Animal, Vegetal e Bactéria | Todas as Organelas</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', 'Poppins', 'Orbitron', monospace; background-color: #030318; color: #fff; }
+        .ui-panel {
+            position: fixed; bottom: 20px; left: 20px; right: 20px;
+            background: rgba(20, 25, 45, 0.75); backdrop-filter: blur(12px);
+            border-radius: 28px; border: 1px solid rgba(0, 255, 255, 0.3);
+            padding: 15px 20px; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;
+            z-index: 20; pointer-events: auto; font-size: 13px;
+        }
+        @media (min-width: 768px) {
+            .ui-panel { left: 20px; right: auto; flex-direction: column; top: 20px; bottom: auto; width: 280px; }
+            .info-card { bottom: 20px; right: 20px; left: auto; top: auto; width: 320px; }
+        }
+        button {
+            background: rgba(0, 20, 40, 0.7); border: 1px solid rgba(0, 255, 255, 0.6);
+            color: #0ff; font-weight: bold; padding: 8px 16px; border-radius: 40px;
+            cursor: pointer; transition: all 0.2s; font-family: monospace; font-size: 12px;
+        }
+        button:hover { background: #0ff; color: #0a0f1f; box-shadow: 0 0 12px #0ff; transform: scale(1.02); }
+        .mode-group { display: flex; gap: 8px; flex-wrap: wrap; border-top: 1px solid rgba(0,255,255,0.2); padding-top: 8px; margin-top: 4px; }
+        .mode-group button { background: rgba(0,40,60,0.8); border-color: #0ff; }
+        .active-mode { background: #0ff; color: #0a0f1f; box-shadow: 0 0 12px #0ff; }
+        .info-card {
+            position: fixed; bottom: 20px; right: 20px; background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(16px); border-left: 4px solid #0ff; border-radius: 16px;
+            padding: 14px 20px; max-width: 280px; pointer-events: none; z-index: 20; font-size: 13px;
+        }
+        .info-card h3 { margin: 0 0 6px; color: #0ff; }
+        .info-card p { margin: 0; color: #ddd; }
+        .status-badge {
+            position: fixed; top: 16px; right: 16px; background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px); padding: 6px 12px; border-radius: 40px;
+            font-size: 11px; color: #0ff; border: 1px solid #0ff; z-index: 20; pointer-events: none;
+        }
+        .instruction {
+            position: fixed; bottom: 20px; left: 20px; font-size: 10px;
+            background: rgba(0,0,0,0.4); padding: 4px 12px; border-radius: 20px;
+            pointer-events: none; z-index: 20;
+        }
+    </style>
+</head>
+<body>
+    <div class="status-badge" id="rotationStatus">⚡ ROTAÇÃO AUTOMÁTICA</div>
+    <div class="ui-panel">
+        <button id="toggleAutoRotate">⏸️ PAUSAR ROTAÇÃO</button>
+        <button id="toggleLabelsBtn">🏷️ MOSTRAR NOMES</button>
+        <div style="display: flex; gap:8px;">
+            <button id="zoomInBtn">🔍 +</button>
+            <button id="zoomOutBtn">🔍 -</button>
+        </div>
+        <div class="mode-group">
+            <button id="modeAnimal" class="active-mode">🐾 Animal</button>
+            <button id="modePlant">🌿 Vegetal</button>
+            <button id="modeBacteria">🦠 Bactéria</button>
+            <button id="modeCompare">🔬 Comparar</button>
+        </div>
+        <button id="resetViewBtn">🎯 RESETAR VISÃO</button>
+    </div>
+    <div class="info-card" id="infoPanel">
+        <h3>🔬 SISTEMA CELULAR 3D</h3>
+        <p>Clique nas organelas para informações detalhadas.</p>
+    </div>
+    <div class="instruction">🖱️ Arraste para girar | Scroll zoom | Clique nas estruturas</div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+        import * as TWEEN from 'https://unpkg.com/@tweenjs/tween.js@23.1.1/dist/tween.esm.js';
+
+        // ========== GERENCIADOR PRINCIPAL ==========
+        class CellManager {
+            constructor() {
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x030318);
+                this.scene.fog = new THREE.FogExp2(0x030318, 0.006);
+                
+                this.camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
+                this.camera.position.set(5, 3, 6);
+                
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.shadowMap.enabled = true;
+                document.body.appendChild(this.renderer.domElement);
+                
+                this.labelRenderer = new CSS2DRenderer();
+                this.labelRenderer.setSize(window.innerWidth, window.innerHeight);
+                this.labelRenderer.domElement.style.position = 'absolute';
+                this.labelRenderer.domElement.style.top = '0px';
+                this.labelRenderer.domElement.style.left = '0px';
+                this.labelRenderer.domElement.style.pointerEvents = 'none';
+                document.body.appendChild(this.labelRenderer.domElement);
+                
+                this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.05;
+                this.controls.autoRotate = true;
+                this.controls.autoRotateSpeed = 1.2;
+                this.controls.enableZoom = true;
+                this.controls.zoomSpeed = 1.2;
+                this.controls.target.set(0, 0, 0);
+                
+                this.currentMode = 'animal';
+                this.cells = {};
+                this.activeCell = null;
+                this.comparisonGroup = null;
+                this.forceLabels = false;
+                
+                this.setupLighting();
+                this.setupParticles();
+                this.setupEvents();
+                this.createCells();
+                this.switchToMode('animal');
+                this.animate();
+            }
+            
+            setupLighting() {
+                const ambient = new THREE.AmbientLight(0x222222);
+                this.scene.add(ambient);
+                const main = new THREE.DirectionalLight(0xffffff, 1.2);
+                main.position.set(2,5,3);
+                main.castShadow = true;
+                this.scene.add(main);
+                const fill = new THREE.PointLight(0x4466ff, 0.5);
+                fill.position.set(-2,1,3);
+                this.scene.add(fill);
+                const back = new THREE.PointLight(0x00ccff, 0.4);
+                back.position.set(0,1,-3);
+                this.scene.add(back);
+                this.colorLight1 = new THREE.PointLight(0xff44aa, 0.6);
+                this.colorLight1.position.set(2,2,2);
+                this.scene.add(this.colorLight1);
+                this.colorLight2 = new THREE.PointLight(0x44ffaa, 0.5);
+                this.colorLight2.position.set(-2,-1,2.5);
+                this.scene.add(this.colorLight2);
+            }
+            
+            setupParticles() {
+                const count = 1500;
+                const geom = new THREE.BufferGeometry();
+                const pos = new Float32Array(count*3);
+                for(let i=0;i<count;i++) {
+                    const r = 3 + Math.random() * 4;
+                    const theta = Math.random() * Math.PI*2;
+                    const phi = Math.acos(2*Math.random()-1);
+                    pos[i*3] = r * Math.sin(phi)*Math.cos(theta);
+                    pos[i*3+1] = r * Math.sin(phi)*Math.sin(theta);
+                    pos[i*3+2] = r * Math.cos(phi);
+                }
+                geom.setAttribute('position', new THREE.BufferAttribute(pos,3));
+                const mat = new THREE.PointsMaterial({ color:0x88aaff, size:0.04, transparent:true, opacity:0.4, blending:THREE.AdditiveBlending });
+                this.particles = new THREE.Points(geom, mat);
+                this.scene.add(this.particles);
+            }
+            
+            setupEvents() {
+                window.addEventListener('resize', () => {
+                    this.camera.aspect = window.innerWidth/window.innerHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                    this.labelRenderer.setSize(window.innerWidth, window.innerHeight);
+                });
+                document.getElementById('toggleAutoRotate').onclick = () => {
+                    this.controls.autoRotate = !this.controls.autoRotate;
+                    document.getElementById('rotationStatus').innerHTML = this.controls.autoRotate ? "⚡ ROTAÇÃO AUTOMÁTICA" : "⏹️ MANUAL";
+                };
+                document.getElementById('toggleLabelsBtn').onclick = () => {
+                    this.forceLabels = !this.forceLabels;
+                    if(this.forceLabels) this.showAllLabels(); else this.hideAllLabels();
+                    document.getElementById('toggleLabelsBtn').textContent = this.forceLabels ? "👁️ OCULTAR NOMES" : "🏷️ MOSTRAR NOMES";
+                };
+                document.getElementById('zoomInBtn').onclick = () => this.zoomCamera(-0.5);
+                document.getElementById('zoomOutBtn').onclick = () => this.zoomCamera(0.5);
+                document.getElementById('resetViewBtn').onclick = () => {
+                    new TWEEN.Tween(this.camera.position).to({x:5,y:3,z:6}, 600).start();
+                    new TWEEN.Tween(this.controls.target).to({x:0,y:0,z:0},600).onUpdate(()=>this.controls.update()).start();
+                    this.controls.autoRotate = true;
+                    document.getElementById('rotationStatus').innerHTML = "⚡ ROTAÇÃO AUTOMÁTICA";
+                };
+                document.getElementById('modeAnimal').onclick = () => this.switchToMode('animal');
+                document.getElementById('modePlant').onclick = () => this.switchToMode('plant');
+                document.getElementById('modeBacteria').onclick = () => this.switchToMode('bacteria');
+                document.getElementById('modeCompare').onclick = () => this.switchToMode('compare');
+            }
+            
+            zoomCamera(delta) {
+                const dist = this.camera.position.distanceTo(this.controls.target);
+                let newDist = dist - delta;
+                newDist = Math.max(1.2, Math.min(12, newDist));
+                const dir = new THREE.Vector3().subVectors(this.camera.position, this.controls.target).normalize();
+                new TWEEN.Tween(this.camera.position).to(this.controls.target.clone().add(dir.multiplyScalar(newDist)), 150).start();
+            }
+            
+            createCells() {
+                this.cells.animal = new AnimalCell(this.scene);
+                this.cells.plant = new PlantCell(this.scene);
+                this.cells.bacteria = new BacteriaCell(this.scene);
+                for(let key in this.cells) this.cells[key].setVisible(false);
+            }
+            
+            switchToMode(mode) {
+                this.currentMode = mode;
+                ['modeAnimal','modePlant','modeBacteria','modeCompare'].forEach(id => {
+                    const btn = document.getElementById(id);
+                    if(id === `mode${mode.charAt(0).toUpperCase()+mode.slice(1)}` || (mode==='compare' && id==='modeCompare'))
+                        btn.classList.add('active-mode');
+                    else btn.classList.remove('active-mode');
+                });
+                
+                if(this.comparisonGroup) { this.scene.remove(this.comparisonGroup); this.comparisonGroup = null; }
+                if(this.activeCell) { this.activeCell.setVisible(false); this.activeCell = null; }
+                for(let key in this.cells) this.cells[key].setVisible(false);
+                
+                if(mode === 'compare') {
+                    this.comparisonGroup = new THREE.Group();
+                    const offsetX = 3.8;
+                    this.cells.animal.setVisible(true, this.comparisonGroup);
+                    this.cells.animal.group.position.set(-offsetX, 0, 0);
+                    this.cells.plant.setVisible(true, this.comparisonGroup);
+                    this.cells.plant.group.position.set(0, 0, 0);
+                    this.cells.bacteria.setVisible(true, this.comparisonGroup);
+                    this.cells.bacteria.group.position.set(offsetX, 0, 0);
+                    this.scene.add(this.comparisonGroup);
+                    if(this.forceLabels) {
+                        this.cells.animal.showLabels(true);
+                        this.cells.plant.showLabels(true);
+                        this.cells.bacteria.showLabels(true);
+                    } else {
+                        this.cells.animal.showLabels(false);
+                        this.cells.plant.showLabels(false);
+                        this.cells.bacteria.showLabels(false);
+                    }
+                } else {
+                    const cell = this.cells[mode];
+                    cell.setVisible(true);
+                    cell.group.position.set(0,0,0);
+                    this.activeCell = cell;
+                    if(this.forceLabels) cell.showLabels(true);
+                    else cell.showLabels(false);
+                }
+            }
+            
+            showAllLabels() {
+                if(this.currentMode === 'compare') {
+                    this.cells.animal.showLabels(true);
+                    this.cells.plant.showLabels(true);
+                    this.cells.bacteria.showLabels(true);
+                } else if(this.activeCell) {
+                    this.activeCell.showLabels(true);
+                }
+            }
+            hideAllLabels() {
+                if(this.currentMode === 'compare') {
+                    this.cells.animal.showLabels(false);
+                    this.cells.plant.showLabels(false);
+                    this.cells.bacteria.showLabels(false);
+                } else if(this.activeCell) {
+                    this.activeCell.showLabels(false);
+                }
+            }
+            
+            animate() {
+                let time = 0;
+                const animateLoop = () => {
+                    requestAnimationFrame(animateLoop);
+                    time += 0.012;
+                    this.colorLight1.intensity = 0.55 + Math.sin(time)*0.2;
+                    this.colorLight2.intensity = 0.5 + Math.cos(time*0.9)*0.2;
+                    if(this.particles) this.particles.rotation.y = time*0.05;
+                    TWEEN.update();
+                    this.controls.update();
+                    if(this.currentMode === 'compare') {
+                        this.cells.animal.updateAnimation(time);
+                        this.cells.plant.updateAnimation(time);
+                        this.cells.bacteria.updateAnimation(time);
+                    } else if(this.activeCell) {
+                        this.activeCell.updateAnimation(time);
+                    }
+                    this.renderer.render(this.scene, this.camera);
+                    this.labelRenderer.render(this.scene, this.camera);
+                };
+                animateLoop();
+            }
+        }
+        
+        // ========== CLASSE BASE ==========
+        class BaseCell3D {
+            constructor(scene, type) {
+                this.scene = scene;
+                this.type = type;
+                this.group = new THREE.Group();
+                this.organellesList = [];
+                this.labelsVisible = false;
+            }
+            setVisible(visible, parentGroup = null) {
+                if(parentGroup) {
+                    parentGroup.add(this.group);
+                } else if(visible && !this.group.parent) {
+                    this.scene.add(this.group);
+                } else if(!visible && this.group.parent) {
+                    this.group.parent.remove(this.group);
+                }
+                this.group.visible = visible;
+            }
+            createLabel(text, color, position, description, objMesh) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                div.style.color = `#${color.toString(16)}`;
+                div.style.fontSize = '0.7rem';
+                div.style.fontWeight = 'bold';
+                div.style.fontFamily = "'Orbitron', monospace";
+                div.style.background = 'rgba(0,0,0,0.7)';
+                div.style.backdropFilter = 'blur(6px)';
+                div.style.padding = '4px 12px';
+                div.style.borderRadius = '30px';
+                div.style.border = `1px solid #${color.toString(16)}`;
+                div.style.whiteSpace = 'nowrap';
+                div.style.cursor = 'pointer';
+                div.style.pointerEvents = 'auto';
+                div.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    document.getElementById('infoPanel').innerHTML = `<h3>${text}</h3><p>${description}</p>`;
+                    if(objMesh && objMesh.material) {
+                        objMesh.material.emissiveIntensity = 0.9;
+                        setTimeout(() => { if(objMesh.material) objMesh.material.emissiveIntensity = 0.2; }, 600);
+                    }
+                });
+                const label = new CSS2DObject(div);
+                label.position.copy(position);
+                this.group.add(label);
+                return label;
+            }
+            showLabels(visible) {
+                this.labelsVisible = visible;
+                for(let item of this.organellesList) {
+                    if(item.label) item.label.visible = visible;
+                }
+            }
+            updateAnimation(time) {}
+        }
+        
+        // ========== CÉLULA ANIMAL (COMPLETA - TODAS ORGANELAS) ==========
+        class AnimalCell extends BaseCell3D {
+            constructor(scene) {
+                super(scene, 'animal');
+                this.build();
+            }
+            build() {
+                // 1. Membrana Plasmática
+                const membGeo = new THREE.SphereGeometry(2.45, 64,64);
+                const membMat = new THREE.MeshPhongMaterial({ color:0x33ccff, emissive:0x004455, transparent:true, opacity:0.12 });
+                const membrane = new THREE.Mesh(membGeo, membMat);
+                this.group.add(membrane);
+                
+                // 2. Núcleo
+                const nucleus = new THREE.Mesh(new THREE.SphereGeometry(0.9,64,64), new THREE.MeshStandardMaterial({ color:0xaa44ff, emissive:0x331166 }));
+                nucleus.position.set(-0.2,0.3,0.4);
+                this.group.add(nucleus);
+                
+                // 3. Nucléolo
+                const nucleolus = new THREE.Mesh(new THREE.SphereGeometry(0.38,48,48), new THREE.MeshStandardMaterial({ color:0xff66cc, emissive:0x551133 }));
+                nucleolus.position.set(-0.1,0.45,0.65);
+                this.group.add(nucleolus);
+                
+                // 4. Mitocôndrias (6 unidades)
+                const mitos = [];
+                [[1.1,-0.4,1.0],[-1.2,0.7,0.9],[0.5,-1.1,-0.8],[-0.7,-0.9,1.3],[1.4,0.2,-0.5],[-1.0,-0.2,-1.2]].forEach(pos => {
+                    const group = new THREE.Group();
+                    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,0.7,24), new THREE.MeshStandardMaterial({ color:0x66dd66, emissive:0x226622 }));
+                    group.add(body);
+                    for(let i=-0.25;i<=0.25;i+=0.25) {
+                        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.23,0.05,16,40), new THREE.MeshStandardMaterial({ color:0x88ff88 }));
+                        ring.rotation.x=Math.PI/2; ring.position.y=i;
+                        group.add(ring);
+                    }
+                    group.position.set(pos[0],pos[1],pos[2]);
+                    this.group.add(group);
+                    mitos.push(group);
+                });
+                
+                // 5. Complexo de Golgi
+                const golgi = new THREE.Group();
+                for(let i=0;i<6;i++) {
+                    const disk = new THREE.Mesh(new THREE.CylinderGeometry(0.45-i*0.05,0.5-i*0.04,0.08,24), new THREE.MeshStandardMaterial({ color:0xffaa66, emissive:0x442200 }));
+                    disk.position.y = i*0.12-0.3;
+                    golgi.add(disk);
+                }
+                golgi.position.set(-1.3,0.9,-1.1);
+                this.group.add(golgi);
+                
+                // 6. Retículo Endoplasmático Rugoso (RER)
+                const rer = new THREE.Group();
+                const torus = new THREE.Mesh(new THREE.TorusKnotGeometry(0.65,0.12,120,12,2,3), new THREE.MeshStandardMaterial({ color:0x77aaff, emissive:0x115588 }));
+                torus.scale.set(1.2,0.9,0.8);
+                rer.add(torus);
+                // Adicionar ribossomos na superfície do RER
+                for(let i=0;i<60;i++) {
+                    const rib = new THREE.Mesh(new THREE.SphereGeometry(0.045,6,6), new THREE.MeshStandardMaterial({ color:0xff6666 }));
+                    const ang = Math.random()*Math.PI*2;
+                    rib.position.set(Math.sin(ang)*0.7, Math.cos(ang*2)*0.4, Math.cos(ang)*0.6);
+                    rer.add(rib);
+                }
+                rer.position.set(1.4,-0.2,-1.0);
+                this.group.add(rer);
+                
+                // 7. Retículo Endoplasmático Liso (REL)
+                const rel = new THREE.Group();
+                const tube1 = new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,1.1,8), new THREE.MeshStandardMaterial({ color:0x88dd88 }));
+                tube1.rotation.z=0.7; tube1.position.set(0.3,0,0);
+                const tube2 = new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,0.9,8), new THREE.MeshStandardMaterial({ color:0x88dd88 }));
+                tube2.rotation.x=0.9; tube2.position.set(-0.2,0.2,0.2);
+                const tube3 = new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,0.8,8), new THREE.MeshStandardMaterial({ color:0x88dd88 }));
+                tube3.rotation.z=-0.5; tube3.position.set(0.1,-0.3,0.3);
+                rel.add(tube1,tube2,tube3);
+                rel.position.set(-0.6,-0.8,1.4);
+                this.group.add(rel);
+                
+                // 8. Lisossomos (4 unidades)
+                const lysosomes = [];
+                [[0.9,-1.0,-0.7],[-0.8,-0.5,-1.4],[1.5,0.5,-0.2],[-1.3,-0.9,0.8]].forEach(pos => {
+                    const lys = new THREE.Mesh(new THREE.SphereGeometry(0.22,32,32), new THREE.MeshStandardMaterial({ color:0xff66aa }));
+                    lys.position.set(pos[0],pos[1],pos[2]);
+                    this.group.add(lys);
+                    lysosomes.push(lys);
+                });
+                
+                // 9. Centríolos (par)
+                const cent = new THREE.Group();
+                const c1 = new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.15,0.6,12), new THREE.MeshStandardMaterial({ color:0x44ccff }));
+                c1.rotation.z=Math.PI/2;
+                const c2 = new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.15,0.6,12), new THREE.MeshStandardMaterial({ color:0x44ccff }));
+                c2.rotation.x=Math.PI/2; c2.position.set(0.4,0,0);
+                cent.add(c1,c2);
+                cent.position.set(-1.6,-0.8,-0.9);
+                this.group.add(cent);
+                
+                // 10. Vacúolos (2 unidades)
+                const vac1 = new THREE.Mesh(new THREE.SphereGeometry(0.45,32,32), new THREE.MeshPhongMaterial({ color:0x88aaff, transparent:true, opacity:0.5 }));
+                vac1.position.set(1.2,1.0,0.2);
+                this.group.add(vac1);
+                const vac2 = new THREE.Mesh(new THREE.SphereGeometry(0.35,32,32), vac1.material.clone());
+                vac2.position.set(-0.5,1.3,-0.9);
+                this.group.add(vac2);
+                
+                // 11. Peroxissomos (3 unidades)
+                const perox = [];
+                [[0.3,-1.2,1.1],[-1.1,1.0,0.7],[0.8,-0.3,-1.3]].forEach(pos => {
+                    const p = new THREE.Mesh(new THREE.SphereGeometry(0.18,28,28), new THREE.MeshStandardMaterial({ color:0xffaa77 }));
+                    p.position.set(pos[0],pos[1],pos[2]);
+                    this.group.add(p);
+                    perox.push(p);
+                });
+                
+                // 12. Ribossomos livres (muitos)
+                const ribGroup = new THREE.Group();
+                for(let i=0;i<150;i++) {
+                    const rib = new THREE.Mesh(new THREE.SphereGeometry(0.045,8,8), new THREE.MeshStandardMaterial({ color:0xff5555 }));
+                    const rad = 1.5+Math.random()*1.2;
+                    const theta = Math.random()*Math.PI*2;
+                    const phi = Math.acos(2*Math.random()-1);
+                    rib.position.set(rad*Math.sin(phi)*Math.cos(theta), rad*Math.sin(phi)*Math.sin(theta), rad*Math.cos(phi));
+                    ribGroup.add(rib);
+                }
+                this.group.add(ribGroup);
+                
+                // 13. Centrossomo (região ao redor dos centríolos)
+                const centrosome = new THREE.Mesh(new THREE.SphereGeometry(0.28,16,16), new THREE.MeshPhongMaterial({ color:0x88aaff, emissive:0x224466, transparent:true, opacity:0.4 }));
+                centrosome.position.copy(cent.position);
+                this.group.add(centrosome);
+                
+                // 14. Citoesqueleto (linhas de microtúbulos representativos)
+                const cytoskeletonGroup = new THREE.Group();
+                for(let i=0;i<30;i++) {
+                    const ang = Math.random()*Math.PI*2;
+                    const rad = 2.3;
+                    const start = new THREE.Vector3(Math.cos(ang)*rad*0.8, Math.sin(ang)*rad*0.6, Math.sin(ang*2)*rad*0.5);
+                    const end = new THREE.Vector3(Math.cos(ang+Math.PI)*rad*0.6, Math.sin(ang+1)*rad*0.5, Math.cos(ang)*rad*0.7);
+                    const points = [start, end];
+                    const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+                    const lineMat = new THREE.LineBasicMaterial({ color:0x77aaff });
+                    const line = new THREE.Line(lineGeo, lineMat);
+                    cytoskeletonGroup.add(line);
+                }
+                this.group.add(cytoskeletonGroup);
+                
+                // ========== LABELS (TODAS AS ORGANELAS) ==========
+                this.organellesList.push({ label: this.createLabel("🛡️ Membrana Plasmática", 0x33ccff, new THREE.Vector3(0,2.4,1.2), "Barreira seletiva que controla entrada e saída de substâncias.", membrane), mesh:membrane });
+                this.organellesList.push({ label: this.createLabel("🔬 Núcleo", 0xaa44ff, nucleus.position.clone().add(0.3,0.3,0.3), "Centro de controle da célula, contém o DNA.", nucleus), mesh:nucleus });
+                this.organellesList.push({ label: this.createLabel("🧬 Nucléolo", 0xff66cc, nucleolus.position.clone().add(0.2,0.2,0.2), "Produz ribossomos a partir de RNA ribossômico.", nucleolus), mesh:nucleolus });
+                this.organellesList.push({ label: this.createLabel("⚡ Mitocôndria", 0x66dd66, mitos[0].position.clone().add(0.2,0.2,0.2), "Usina energética, produz ATP pela respiração celular.", mitos[0]), mesh:mitos[0] });
+                this.organellesList.push({ label: this.createLabel("📦 Complexo de Golgi", 0xffaa66, golgi.position.clone().add(0,0.4,0), "Modifica, empacota e distribui proteínas e lipídios.", golgi), mesh:golgi });
+                this.organellesList.push({ label: this.createLabel("🌀 R.E. Rugoso (RER)", 0x77aaff, rer.position.clone().add(0.3,0.1,0.2), "Síntese de proteínas, possui ribossomos aderidos.", rer), mesh:rer });
+                this.organellesList.push({ label: this.createLabel("🌀 R.E. Liso (REL)", 0x88dd88, rel.position.clone().add(0.2,0.2,0.3), "Síntese de lipídios e desintoxicação celular.", rel), mesh:rel });
+                this.organellesList.push({ label: this.createLabel("🧪 Lisossomo", 0xff66aa, lysosomes[0].position.clone().add(0.2,0.2,0.2), "Digestão intracelular e reciclagem de organelas.", lysosomes[0]), mesh:lysosomes[0] });
+                this.organellesList.push({ label: this.createLabel("⚙️ Centríolos", 0x44ccff, cent.position.clone().add(0.2,0.2,0), "Organizam os microtúbulos durante a divisão celular.", cent), mesh:cent });
+                this.organellesList.push({ label: this.createLabel("⭐ Centrossomo", 0x88aaff, centrosome.position.clone().add(0,0.3,0), "Centro organizador de microtúbulos.", centrosome), mesh:centrosome });
+                this.organellesList.push({ label: this.createLabel("💧 Vacúolo", 0x88aaff, vac1.position.clone().add(0.3,0.3,0), "Armazenamento de água, nutrientes e resíduos.", vac1), mesh:vac1 });
+                this.organellesList.push({ label: this.createLabel("🧫 Peroxissomo", 0xffaa77, perox[0].position.clone().add(0.15,0.15,0.15), "Oxidação de ácidos graxos e detoxificação de peróxido.", perox[0]), mesh:perox[0] });
+                this.organellesList.push({ label: this.createLabel("📚 Ribossomos", 0xff6666, new THREE.Vector3(1.2,-1.0,0.8), "Síntese de proteínas a partir de aminoácidos.", ribGroup), mesh:ribGroup });
+                this.organellesList.push({ label: this.createLabel("🔗 Citoesqueleto", 0x77aaff, new THREE.Vector3(0,-1.2,1.6), "Rede de filamentos que dá suporte e forma à célula.", cytoskeletonGroup), mesh:cytoskeletonGroup });
+                this.organellesList.push({ label: this.createLabel("✨ Citoplasma", 0x88aaff, new THREE.Vector3(0,-0.8,1.5), "Gel aquoso onde as organelas estão suspensas e ocorrem reações.", null), mesh:null });
+                
+                this.showLabels(false);
+            }
+            updateAnimation(t) {
+                this.group.children.forEach(child => { if(child.isGroup && child !== this.group.children.find(c=>c===this.group.children[0])) child.rotation.z = t*0.3; });
+            }
+        }
+        
+        // ========== CÉLULA VEGETAL (COMPLETA) ==========
+        class PlantCell extends BaseCell3D {
+            constructor(scene) {
+                super(scene, 'plant');
+                this.build();
+            }
+            build() {
+                // Parede celular
+                const wallGeo = new THREE.SphereGeometry(2.55, 64,64);
+                const wallMat = new THREE.MeshPhongMaterial({ color:0x88aa66, emissive:0x224411, transparent:true, opacity:0.15 });
+                const wall = new THREE.Mesh(wallGeo, wallMat);
+                this.group.add(wall);
+                // Membrana plasmática
+                const membraneGeo = new THREE.SphereGeometry(2.45, 64,64);
+                const membMat = new THREE.MeshPhongMaterial({ color:0x66cc88, emissive:0x116633, transparent:true, opacity:0.2 });
+                const membrane = new THREE.Mesh(membraneGeo, membMat);
+                this.group.add(membrane);
+                // Núcleo
+                const nucleus = new THREE.Mesh(new THREE.SphereGeometry(0.85,64,64), new THREE.MeshStandardMaterial({ color:0xaa66ff, emissive:0x331166 }));
+                nucleus.position.set(0,0.2,0.3);
+                this.group.add(nucleus);
+                // Vacúolo central
+                const vacuole = new THREE.Mesh(new THREE.SphereGeometry(1.1,48,48), new THREE.MeshPhongMaterial({ color:0x88aaff, transparent:true, opacity:0.4 }));
+                vacuole.position.set(0.5,-0.3,0.2);
+                this.group.add(vacuole);
+                // Cloroplastos
+                const chloroplasts = [];
+                const clorPos = [[1.2,0.5,0.8],[-1.1,0.9,-0.5],[0.8,-1.1,-0.7],[-0.9,-0.4,1.3],[1.3,-0.7,-0.9],[-1.3,0.1,0.9]];
+                clorPos.forEach(pos => {
+                    const chloro = new THREE.Mesh(new THREE.SphereGeometry(0.3,24,24), new THREE.MeshStandardMaterial({ color:0x44dd44, emissive:0x226622 }));
+                    chloro.position.set(pos[0],pos[1],pos[2]);
+                    this.group.add(chloro);
+                    chloroplasts.push(chloro);
+                });
+                // Mitocôndrias
+                const mito1 = new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.25,0.6,16), new THREE.MeshStandardMaterial({ color:0x66dd66 }));
+                mito1.position.set(-1.2,-0.7,0.5);
+                this.group.add(mito1);
+                const mito2 = new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.25,0.6,16), new THREE.MeshStandardMaterial({ color:0x66dd66 }));
+                mito2.position.set(1.1,-0.9,-0.4);
+                this.group.add(mito2);
+                // Golgi
+                const golgi = new THREE.Group();
+                for(let i=0;i<5;i++) {
+                    const d = new THREE.Mesh(new THREE.CylinderGeometry(0.4-i*0.05,0.45-i*0.04,0.08,20), new THREE.MeshStandardMaterial({ color:0xffaa66 }));
+                    d.position.y = i*0.12-0.2;
+                    golgi.add(d);
+                }
+                golgi.position.set(1.1,0.7,-1.0);
+                this.group.add(golgi);
+                // RER
+                const rer = new THREE.Mesh(new THREE.TorusKnotGeometry(0.7,0.1,100,16,2,3), new THREE.MeshStandardMaterial({ color:0x77aaff }));
+                rer.position.set(-1.0,-0.2,-1.2);
+                this.group.add(rer);
+                // REL
+                const relGroup = new THREE.Group();
+                const relTube1 = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,0.9,6), new THREE.MeshStandardMaterial({ color:0x88dd88 }));
+                relTube1.rotation.x=0.5; relTube1.position.set(0.8,0.4,0.9);
+                const relTube2 = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,0.7,6), new THREE.MeshStandardMaterial({ color:0x88dd88 }));
+                relTube2.rotation.z=0.8; relTube2.position.set(-0.5,0.7,1.2);
+                relGroup.add(relTube1, relTube2);
+                this.group.add(relGroup);
+                // Peroxissomos
+                const perox = new THREE.Mesh(new THREE.SphereGeometry(0.18,28,28), new THREE.MeshStandardMaterial({ color:0xffaa77 }));
+                perox.position.set(-0.8,0.2,1.4);
+                this.group.add(perox);
+                // Ribossomos
+                const ribGroup = new THREE.Group();
+                for(let i=0;i<120;i++) {
+                    const rib = new THREE.Mesh(new THREE.SphereGeometry(0.05,6,6), new THREE.MeshStandardMaterial({ color:0xff8888 }));
+                    const rad = 1.8+Math.random()*1.2;
+                    const theta = Math.random()*Math.PI*2;
+                    const phi = Math.acos(2*Math.random()-1);
+                    rib.position.set(rad*Math.sin(phi)*Math.cos(theta), rad*Math.sin(phi)*Math.sin(theta), rad*Math.cos(phi));
+                    ribGroup.add(rib);
+                }
+                this.group.add(ribGroup);
+                // Labels
+                this.organellesList.push({ label: this.createLabel("🌱 Parede Celular", 0x88aa66, new THREE.Vector3(0,2.2,1.5), "Estrutura rígida de celulose que dá suporte.", wall), mesh:wall });
+                this.organellesList.push({ label: this.createLabel("🛡️ Membrana Plasmática", 0x66cc88, new THREE.Vector3(0,2.4,1.0), "Barreira seletiva logo abaixo da parede.", membrane), mesh:membrane });
+                this.organellesList.push({ label: this.createLabel("🔬 Núcleo", 0xaa66ff, nucleus.position.clone().add(0.3,0.3,0.3), "Contém o material genético.", nucleus), mesh:nucleus });
+                this.organellesList.push({ label: this.createLabel("💧 Vacúolo Central", 0x88aaff, vacuole.position.clone().add(0.5,0.2,0.5), "Armazenamento de água e manutenção da pressão de turgescência.", vacuole), mesh:vacuole });
+                this.organellesList.push({ label: this.createLabel("🌿 Cloroplasto", 0x44dd44, chloroplasts[0].position.clone().add(0.2,0.2,0.2), "Realiza a fotossíntese, produzindo glicose.", chloroplasts[0]), mesh:chloroplasts[0] });
+                this.organellesList.push({ label: this.createLabel("⚡ Mitocôndria", 0x66dd66, mito1.position.clone().add(0.2,0.2,0.2), "Produção de energia (ATP).", mito1), mesh:mito1 });
+                this.organellesList.push({ label: this.createLabel("📦 Complexo Golgiense", 0xffaa66, golgi.position.clone().add(0,0.3,0), "Secreção e modificação de proteínas.", golgi), mesh:golgi });
+                this.organellesList.push({ label: this.createLabel("🌀 R.E. Rugoso", 0x77aaff, rer.position.clone().add(0.2,0.2,0.3), "Síntese proteica.", rer), mesh:rer });
+                this.organellesList.push({ label: this.createLabel("🌀 R.E. Liso", 0x88dd88, relGroup.position.clone().add(0.3,0.1,0.2), "Síntese de lipídios.", relGroup), mesh:relGroup });
+                this.organellesList.push({ label: this.createLabel("🧫 Peroxissomo", 0xffaa77, perox.position.clone().add(0.15,0.15,0.15), "Detoxificação celular.", perox), mesh:perox });
+                this.organellesList.push({ label: this.createLabel("📚 Ribossomos", 0xff8888, new THREE.Vector3(1.5,-0.8,0.5), "Síntese de proteínas.", ribGroup), mesh:ribGroup });
+                this.organellesList.push({ label: this.createLabel("✨ Citoplasma", 0x88aaff, new THREE.Vector3(0,-1.0,1.2), "Meio metabólico.", null), mesh:null });
+                this.showLabels(false);
+            }
+            updateAnimation(t) {
+                this.group.children.forEach(c => { if(c.isMesh && c.material && c.material.color.getHex()===0x44dd44) c.rotation.z = t*0.2; });
+            }
+        }
+        
+        // ========== CÉLULA BACTÉRIA (COMPLETA) ==========
+        class BacteriaCell extends BaseCell3D {
+            constructor(scene) {
+                super(scene, 'bacteria');
+                this.build();
+            }
+            build() {
+                // Cápsula
+                const capsule = new THREE.Mesh(new THREE.SphereGeometry(1.8, 64,64), new THREE.MeshPhongMaterial({ color:0xccaa88, emissive:0x442200, transparent:true, opacity:0.2 }));
+                this.group.add(capsule);
+                // Parede celular
+                const cellWall = new THREE.Mesh(new THREE.SphereGeometry(1.7, 64,64), new THREE.MeshStandardMaterial({ color:0xcc8866, emissive:0x331100 }));
+                this.group.add(cellWall);
+                // Membrana plasmática
+                const plasmaMemb = new THREE.Mesh(new THREE.SphereGeometry(1.62, 64,64), new THREE.MeshPhongMaterial({ color:0xeeaa88, transparent:true, opacity:0.3 }));
+                this.group.add(plasmaMemb);
+                // Nucleoide
+                const nucleoid = new THREE.Mesh(new THREE.SphereGeometry(0.7,32,32), new THREE.MeshStandardMaterial({ color:0xdd88aa, emissive:0x551133 }));
+                nucleoid.position.set(0.2,0.1,0.3);
+                this.group.add(nucleoid);
+                // Plasmídeos
+                const plasmid1 = new THREE.Mesh(new THREE.TorusGeometry(0.35,0.08,16,40), new THREE.MeshStandardMaterial({ color:0xffaa66 }));
+                plasmid1.position.set(-0.6,0.5,0.4);
+                this.group.add(plasmid1);
+                const plasmid2 = new THREE.Mesh(new THREE.TorusGeometry(0.28,0.06,16,40), new THREE.MeshStandardMaterial({ color:0xffaa66 }));
+                plasmid2.position.set(0.7,-0.4,-0.3);
+                this.group.add(plasmid2);
+                // Ribossomos
+                const ribGroup = new THREE.Group();
+                for(let i=0;i<280;i++) {
+                    const rib = new THREE.Mesh(new THREE.SphereGeometry(0.06,8,8), new THREE.MeshStandardMaterial({ color:0xff7777 }));
+                    const rad = 1.2+Math.random()*0.8;
+                    const theta = Math.random()*Math.PI*2;
+                    const phi = Math.acos(2*Math.random()-1);
+                    rib.position.set(rad*Math.sin(phi)*Math.cos(theta), rad*Math.sin(phi)*Math.sin(theta), rad*Math.cos(phi));
+                    ribGroup.add(rib);
+                }
+                this.group.add(ribGroup);
+                // Flagelo
+                const flagCurve = new THREE.CatmullRomCurve3([new THREE.Vector3(1.2,0.2,0.5), new THREE.Vector3(1.8,0.6,0.2), new THREE.Vector3(2.2,0.1,-0.3), new THREE.Vector3(2.5,-0.4,-0.1)]);
+                const flagGeo = new THREE.TubeGeometry(flagCurve, 20, 0.08, 6, false);
+                const flagMat = new THREE.MeshStandardMaterial({ color:0x88aaff });
+                const flagellum = new THREE.Mesh(flagGeo, flagMat);
+                this.group.add(flagellum);
+                // Fímbrias
+                for(let i=0;i<70;i++) {
+                    const ang = Math.random()*Math.PI*2;
+                    const x = Math.cos(ang)*1.68;
+                    const z = Math.sin(ang)*1.68;
+                    const pili = new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,0.2,4), new THREE.MeshStandardMaterial({ color:0xccaa88 }));
+                    pili.position.set(x, Math.sin(ang*3)*0.3+0.2, z);
+                    this.group.add(pili);
+                }
+                // Labels
+                this.organellesList.push({ label: this.createLabel("🧫 Cápsula Bacteriana", 0xccaa88, new THREE.Vector3(0,1.7,1.3), "Camada protetora externa de polissacarídeos.", capsule), mesh:capsule });
+                this.organellesList.push({ label: this.createLabel("🧱 Parede Celular", 0xcc8866, new THREE.Vector3(0,1.5,1.5), "Estrutura rígida de peptideoglicano.", cellWall), mesh:cellWall });
+                this.organellesList.push({ label: this.createLabel("🛡️ Membrana Plasmática", 0xeeaa88, new THREE.Vector3(0,1.3,1.4), "Barreira seletiva.", plasmaMemb), mesh:plasmaMemb });
+                this.organellesList.push({ label: this.createLabel("🧬 Nucleoide", 0xdd88aa, nucleoid.position.clone().add(0.3,0.2,0.3), "DNA circular (cromossomo bacteriano).", nucleoid), mesh:nucleoid });
+                this.organellesList.push({ label: this.createLabel("🧬 Plasmídeo", 0xffaa66, plasmid1.position.clone().add(0.2,0.2,0.2), "DNA extra-cromossomal.", plasmid1), mesh:plasmid1 });
+                this.organellesList.push({ label: this.createLabel("📚 Ribossomos", 0xff7777, new THREE.Vector3(0.8,0.9,0.6), "Síntese de proteínas.", ribGroup), mesh:ribGroup });
+                this.organellesList.push({ label: this.createLabel("🏁 Flagelo", 0x88aaff, new THREE.Vector3(2.0,0.4,0.2), "Locomoção.", flagellum), mesh:flagellum });
+                this.organellesList.push({ label: this.createLabel("📍 Fímbrias/Pili", 0xccaa88, new THREE.Vector3(1.3,-0.5,1.0), "Adesão e conjugação.", null), mesh:null });
+                this.organellesList.push({ label: this.createLabel("✨ Citoplasma", 0x88aaff, new THREE.Vector3(-0.5,-0.6,1.0), "Meio interno.", null), mesh:null });
+                this.showLabels(false);
+            }
+            updateAnimation(t) {
+                const flag = this.group.children.find(c => c.isMesh && c.geometry && c.geometry.type==='TubeGeometry');
+                if(flag) flag.rotation.z = Math.sin(t*3)*0.1;
+            }
+        }
+        
+        // Inicialização
+        window.manager = new CellManager();
+    </script>
+</body>
+</html>

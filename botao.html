@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Navegar para célula 3D</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #eef5f0 0%, #d4e2da 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', system-ui, 'Inter', sans-serif;
+            padding: 1rem;
+        }
+
+        .container {
+            text-align: center;
+        }
+
+        .btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #2A9D8F, #1F6E43);
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 600;
+            padding: 1rem 2rem;
+            border-radius: 3rem;
+            text-decoration: none;
+            box-shadow: 0 8px 20px rgba(31, 110, 67, 0.3);
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 28px rgba(31, 110, 67, 0.4);
+            background: linear-gradient(135deg, #238b7e, #1a5c38);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+        .btn i {
+            margin-right: 8px;
+            font-style: normal;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="célula.teste.html" class="btn">
+            🔬 Ir para célula 3D
+        </a>
+    </div>
+</body>
+</html>
